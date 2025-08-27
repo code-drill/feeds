@@ -249,5 +249,7 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-# End of https://www.toptal.com/developers/gitignore/api/python,pycharm
-feeds.code-drill.eu/output
+/feeds.code-drill.eu/cache/
+/feeds.code-drill.eu/output/
+
+feeds.code-drill.eu/.doit.db*
