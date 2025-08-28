@@ -279,7 +279,7 @@ def generate(
     if total_created > 0:
         typer.echo(f"\nTo build the site:")
         typer.echo(f"   cd {posts_dir.parent}")
-        typer.echo(f"   uv run --active nikola build")
+        typer.echo(f"   nikola build")
     else:
         typer.echo("\nNo new posts to build.")
 

@@ -6,7 +6,18 @@
       "Bash(python:*)",
       "Bash(./run-in-bash.bsh \"uv sync\")",
       "Bash(./run-in-bash.bsh \"uv run --active python generate_blog_posts.py\")",
-      "Bash(timeout 60 ./run-in-bash.bsh:*)"
+      "Bash(timeout 60 ./run-in-bash.bsh:*)",
+      "Bash(pip install:*)",
+      "Bash(timeout:*)",
+      "Bash(nikola list:*)",
+      "Bash(uv run:*)",
+      "Bash(nikola theme:*)",
+      "WebSearch",
+      "WebFetch(domain:*)",
+      "Bash(docker run:*)",
+      "Bash(cat:*)",
+      "Bash(docker build:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

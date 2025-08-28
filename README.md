@@ -1,8 +1,7 @@
-Site generator for [til.code-drill.eu](http://til.code-drill.eu/) based on https://getnikola.com/
+Site generator for [feeds.code-drill.eu](http://feeds.code-drill.eu/) based on https://getnikola.com/
 - pre requirements:
   - manual setup
-    - create python venv  `python -m venv .venv`
-    - install requirements: `pip install -r requirements-win.txt` 
+    - create python venv  `uv sync`
   - automatic
     - docker
     - run `run-bash.cmd`
@@ -11,8 +10,6 @@ Site generator for [til.code-drill.eu](http://til.code-drill.eu/) based on https
   ```
   cd til.code-drill.eu
   nikola new_post -d --format pandoc
-  # or
-  ./new_post.bsh
   
   # optionally commit new md file
   gcnow "PUT COMMIT MESSAGE HERE"
@@ -40,18 +37,22 @@ Site generator for [til.code-drill.eu](http://til.code-drill.eu/) based on https
 - generate content from source:
   - for today
 ```shell
-./run-in-bash.bsh "uv run --active python generate_blog_posts.py"
+# activate venv under .venv
+uv run --active python generate_blog_posts.py
 ```
   - for selected dates
 ```shell
-./run-in-bash.bsh "uv run --active python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27"
+# activate venv under .venv
+uv run --active python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27
 ```
 or when parent os is windows
   - for today
 ```shell
-run-in-bash.cmd "uv run --active python generate_blog_posts.py"
+# activate venv under .venv
+uv run python generate_blog_posts.py
 ```
   - for selected dates
 ```shell
-run-in-bash.cmd "uv run --active python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27"
+# activate venv under .venv
+uv run --active python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27
 ```

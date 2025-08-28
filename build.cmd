@@ -1,0 +1,1 @@
+cd feeds.code-drill.eu && nikola build
