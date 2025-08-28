@@ -24,7 +24,9 @@
       "Bash(grep:*)",
       "Bash(nikola help:*)",
       "Bash(nikola:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:getnikola.com)",
+      "WebFetch(domain:stackoverflow.com)"
     ],
     "deny": [],
     "ask": []

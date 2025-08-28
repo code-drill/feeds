@@ -99,11 +99,7 @@ def create_blog_post(item: dict, posts_dir: Path, verbose: bool = False) -> bool
         if source_tag:
             tags_list.append(source_tag)
     
-    # Add any additional source categories as tags
-    if item['Source Category']:
-        # Split source category by comma and clean up
-        source_tags = [tag.strip().lower() for tag in item['Source Category'].split(',')]
-        tags_list.extend(source_tags)
+    # Note: We only use Source Name for tagging/filtering, not Source Category
     
     # Remove duplicates and filter out empty tags
     tags_set = {tag for tag in tags_list if tag.strip()}
