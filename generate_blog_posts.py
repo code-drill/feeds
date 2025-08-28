@@ -7,7 +7,7 @@ import csv
 import urllib.request
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 from typing import List, Optional
@@ -214,6 +214,16 @@ def generate(
         None,
         "--posts-dir", "-p",
         help="Custom posts directory (default: feeds.code-drill.eu/posts)"
+    ),
+    start_date: Optional[str] = typer.Option(
+        None,
+        "--start-date", "-s",
+        help="Start date for date range processing (YYYY-MM-DD format)"
+    ),
+    offset_days: Optional[int] = typer.Option(
+        None,
+        "--offset-days", "-o",
+        help="Number of days from start date (can be negative for past dates)"
     )
 ):
     """
@@ -229,6 +239,12 @@ def generate(
       
       # Process multiple dates
       python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27
+      
+      # Process date range: 7 days starting from 2025-08-20
+      python generate_blog_posts.py --start-date 2025-08-20 --offset-days 7
+      
+      # Process date range: 3 days before 2025-08-26 (including 2025-08-26)
+      python generate_blog_posts.py --start-date 2025-08-26 --offset-days -3
       
       # Use custom host
       python generate_blog_posts.py --host localhost:3000 2025-08-26
@@ -249,7 +265,50 @@ def generate(
     total_created = 0
     total_processed = 0
     
-    if dates:
+    # Handle date range processing
+    if start_date is not None and offset_days is not None:
+        # Validate start date format
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        except ValueError:
+            typer.echo(f"ERROR: Invalid start date format: {start_date}. Use YYYY-MM-DD format.", err=True)
+            raise typer.Exit(1)
+        
+        # Generate date range
+        dates_to_process = []
+        if offset_days >= 0:
+            # Forward range: start_date to start_date + offset_days
+            for i in range(offset_days + 1):
+                current_date = start_dt + timedelta(days=i)
+                dates_to_process.append(current_date.strftime('%Y-%m-%d'))
+        else:
+            # Backward range: start_date + offset_days to start_date
+            for i in range(abs(offset_days) + 1):
+                current_date = start_dt - timedelta(days=abs(offset_days) - i)
+                dates_to_process.append(current_date.strftime('%Y-%m-%d'))
+        
+        typer.echo(f"Processing date range: {dates_to_process[0]} to {dates_to_process[-1]} ({len(dates_to_process)} days) from {host}")
+        
+        for date_str in dates_to_process:
+            csv_url = f"http://{host}/daily-items/{date_str}.csv"
+            created, processed = process_csv_for_date(csv_url, posts_dir, verbose)
+            total_created += created
+            total_processed += processed
+            
+            if not verbose:
+                typer.echo(f"{date_str}: {created} created, {processed-created} skipped")
+        
+        typer.echo(f"\nSummary:")
+        typer.echo(f"   Total processed: {total_processed} items")
+        typer.echo(f"   Total created: {total_created} new posts")
+        typer.echo(f"   Total skipped: {total_processed - total_created} existing posts")
+        
+    elif start_date is not None or offset_days is not None:
+        # Error if only one of start_date or offset_days is provided
+        typer.echo("ERROR: Both --start-date and --offset-days must be provided together.", err=True)
+        raise typer.Exit(1)
+        
+    elif dates:
         # Process specific dates provided as arguments
         typer.echo(f"Processing {len(dates)} date(s) from {host}")
         
