@@ -36,3 +36,22 @@ Site generator for [til.code-drill.eu](http://til.code-drill.eu/) based on https
   nikola theme -l
   nkiola theme -i NAME
   ```
+
+- generate content from source:
+  - for today
+```shell
+./run-in-bash.bsh "uv run --active python generate_blog_posts.py"
+```
+  - for selected dates
+```shell
+./run-in-bash.bsh "uv run --active python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27"
+```
+or when parent os is windows
+  - for today
+```shell
+run-in-bash.cmd "uv run --active python generate_blog_posts.py"
+```
+  - for selected dates
+```shell
+run-in-bash.cmd "uv run --active python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27"
+```

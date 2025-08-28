@@ -6,5 +6,6 @@ readme = "README.md"
 requires-python = "~=3.13"
 dependencies = [
     "jinja2>=3.1.6",
-    "nikola>=8.3.3",
+    "nikola[extras]>=8.3.3",
+    "requests>=2.31.0",
 ]

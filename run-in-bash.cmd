@@ -1,2 +1,2 @@
 docker build -f Dockerfile -t feeds-code-drill-builder .
-docker run --rm -it -v %cd%:/app feeds-code-drill-builder /bin/bash -c %*
+docker run --rm -it --add-host=host.docker.internal:host-gateway -v %cd%:/app feeds-code-drill-builder /bin/bash -c %*

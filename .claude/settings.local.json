@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(nicola build)"
+      "Bash(nicola build)",
+      "WebFetch(domain:127.0.0.1)",
+      "Bash(python:*)",
+      "Bash(./run-in-bash.bsh \"uv sync\")",
+      "Bash(./run-in-bash.bsh \"uv run --active python generate_blog_posts.py\")",
+      "Bash(timeout 60 ./run-in-bash.bsh:*)"
     ],
     "deny": [],
     "ask": []
