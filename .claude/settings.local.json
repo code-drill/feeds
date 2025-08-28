@@ -17,7 +17,9 @@
       "Bash(docker run:*)",
       "Bash(cat:*)",
       "Bash(docker build:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:localhost)",
+      "Bash(nikola build:*)"
     ],
     "deny": [],
     "ask": []

@@ -47,14 +47,13 @@ def format_markdown_content(item):
     """Format the blog post content in Markdown."""
     summary = clean_html_content(item['Summary'])
     
-    # Create the main content
+    # Create the main content without original link (title links to original now)
     content = f"""
 {summary}
 
 **Source:** [{item['Source Name']}]({item['Source URL']})  
 **Author:** {item['Author'] if item['Author'] else 'Unknown'}  
-**Category:** {item['AI Category']}  
-**Original Link:** [{item['Title']}]({item['Link']})
+**Category:** {item['AI Category']}
 """
     
     return content.strip()
@@ -88,18 +87,30 @@ def create_blog_post(item: dict, posts_dir: Path, verbose: bool = False) -> bool
     description = clean_html_content(item['Summary'])[:150] + "..."
     description = description.replace('"', '\\"')  # Escape quotes
     
-    # Prepare tags (clean up categories and AI category)
+    # Prepare tags for sources (tags will be used for source filtering)
     tags_list = []
-    if item['AI Category']:
-        tags_list.append(item['AI Category'].lower())
+    
+    # Extract source name for tagging
+    source_name = item.get('Source Name', '').strip()
+    if source_name:
+        # Clean up source name for tag
+        source_tag = re.sub(r'[^\w\s-]', '', source_name).strip().lower()
+        source_tag = re.sub(r'[-\s]+', '-', source_tag)
+        if source_tag:
+            tags_list.append(source_tag)
+    
+    # Add any additional source categories as tags
     if item['Source Category']:
         # Split source category by comma and clean up
         source_tags = [tag.strip().lower() for tag in item['Source Category'].split(',')]
         tags_list.extend(source_tags)
-    tags_list.append('tech')  # Add default tag
+    
     # Remove duplicates and filter out empty tags
     tags_set = {tag for tag in tags_list if tag.strip()}
     tags_str = ','.join(sorted(tags_set))  # Sort for consistency
+    
+    # Set category based on AI Category (categories will be used for content type filtering)
+    category = item['AI Category'].lower() if item['AI Category'] else 'general'
     
     # Create Nikola metadata header using HTML comments
     metadata = f"""<!--
@@ -107,7 +118,7 @@ def create_blog_post(item: dict, posts_dir: Path, verbose: bool = False) -> bool
 .. slug: {slug}
 .. date: {pub_date.strftime('%Y-%m-%d %H:%M:%S %z')}
 .. tags: {tags_str}
-.. category: {item['AI Category'].lower() if item['AI Category'] else 'tech'}
+.. category: {category}
 .. link: {item['Link']}
 .. description: {description}
 .. type: text
