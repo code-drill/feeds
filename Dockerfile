@@ -4,6 +4,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
+    pandoc \
+    curl \
     dos2unix \
     && rm -rf /var/lib/apt/lists/*
 

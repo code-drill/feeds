@@ -8,4 +8,5 @@ dependencies = [
     "jinja2>=3.1.6",
     "nikola[extras]>=8.3.3",
     "requests>=2.31.0",
+    "typer>=0.12.0",
 ]

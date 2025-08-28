@@ -34,7 +34,7 @@ Site generator for [til.code-drill.eu](http://til.code-drill.eu/) based on https
 - to change theme:
   ```
   nikola theme -l
-  nkiola theme -i NAME
+  nikola theme -i NAME
   ```
 
 - generate content from source:

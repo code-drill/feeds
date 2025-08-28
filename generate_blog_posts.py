@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 """
 Script to generate Nikola blog posts from CSV data.
-
-Usage:
-    python generate_blog_posts.py # Process today's CSV (default)
-    python generate_blog_posts.py 2025-08-26 # Process specific date
-    python generate_blog_posts.py 2025-08-25 2025-08-26 # Process multiple dates
-
-CSV endpoints:
-    - Current: http://host.docker.internal:8000/daily-items.csv
-    - Historical: http://host.docker.internal:8000/daily-items/<YYYY-MM-DD>.csv
 """
 
 import csv
@@ -19,7 +10,10 @@ import re
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
+from typing import List, Optional
 import html
+
+import typer
 
 
 def slugify(text):
@@ -66,7 +60,7 @@ def format_markdown_content(item):
     return content.strip()
 
 
-def create_blog_post(item, posts_dir):
+def create_blog_post(item: dict, posts_dir: Path, verbose: bool = False) -> bool:
     """Create a single blog post file."""
     # Parse the published date
     pub_date = datetime.fromisoformat(item['Published Date'].replace('Z', '+00:00'))
@@ -85,7 +79,8 @@ def create_blog_post(item, posts_dir):
     
     # Skip if file already exists
     if filepath.exists():
-        print(f"Skipping {date_str}/{filename} - already exists")
+        if verbose:
+            typer.echo(f"SKIP: {date_str}/{filename} - already exists")
         return False
     
     # Clean and prepare metadata fields
@@ -127,7 +122,8 @@ def create_blog_post(item, posts_dir):
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(metadata + content)
     
-    print(f"Created: {date_str}/{filename}")
+    if verbose:
+        typer.echo(f"CREATED: {date_str}/{filename}")
     return True
 
 
@@ -141,20 +137,22 @@ def fetch_csv_data(url):
         return None
 
 
-def process_csv_for_date(csv_url, posts_dir):
+def process_csv_for_date(csv_url: str, posts_dir: Path, verbose: bool = False) -> tuple[int, int]:
     """Process CSV data for a specific date."""
-    print(f"Fetching data from {csv_url}...")
+    if verbose:
+        typer.echo(f"Fetching data from {csv_url}")
+    
     csv_data = fetch_csv_data(csv_url)
     
     if not csv_data:
-        print(f"Failed to fetch CSV data from {csv_url}")
+        typer.echo(f"ERROR: Failed to fetch CSV data from {csv_url}", err=True)
         return 0, 0
     
     # Parse CSV
     try:
         csv_reader = csv.DictReader(csv_data.splitlines())
     except Exception as e:
-        print(f"Error parsing CSV data: {e}")
+        typer.echo(f"ERROR: Error parsing CSV data: {e}", err=True)
         return 0, 0
     
     created_count = 0
@@ -165,25 +163,73 @@ def process_csv_for_date(csv_url, posts_dir):
         
         # Skip items without required fields
         if not all([item.get('Title'), item.get('Link'), item.get('Published Date')]):
-            print(f"Skipping item {processed_count} - missing required fields")
+            if verbose:
+                typer.echo(f"WARNING: Skipping item {processed_count} - missing required fields")
             continue
             
         try:
-            if create_blog_post(item, posts_dir):
+            if create_blog_post(item, posts_dir, verbose):
                 created_count += 1
         except Exception as e:
-            print(f"Error creating post for '{item.get('Title', 'Unknown')}': {e}")
+            typer.echo(f"ERROR: Error creating post for '{item.get('Title', 'Unknown')}': {e}", err=True)
     
     return created_count, processed_count
 
 
-def main():
-    """Main function to process CSV and generate blog posts."""
-    import sys
+app = typer.Typer(
+    help="Generate Nikola blog posts from CSV data feeds.",
+    add_completion=False,
+)
+
+
+@app.command()
+def generate(
+    dates: Optional[List[str]] = typer.Argument(
+        None,
+        help="Specific dates to process (YYYY-MM-DD format). If not provided, processes today's data.",
+        metavar="[DATE...]"
+    ),
+    host: str = typer.Option(
+        "host.docker.internal:8000",
+        "--host", "-h",
+        help="Host for the CSV API endpoint"
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose", "-v",
+        help="Show detailed output including skipped and created files"
+    ),
+    posts_dir: Optional[Path] = typer.Option(
+        None,
+        "--posts-dir", "-p",
+        help="Custom posts directory (default: feeds.code-drill.eu/posts)"
+    )
+):
+    """
+    Generate blog posts from CSV data.
+    
+    Examples:
+    \b
+      # Process today's data
+      python generate_blog_posts.py
+      
+      # Process specific date
+      python generate_blog_posts.py 2025-08-26
+      
+      # Process multiple dates
+      python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27
+      
+      # Use custom host
+      python generate_blog_posts.py --host localhost:3000 2025-08-26
+      
+      # Verbose output
+      python generate_blog_posts.py --verbose 2025-08-26
+    """
     
     # Determine paths
     script_dir = Path(__file__).parent
-    posts_dir = script_dir / "feeds.code-drill.eu" / "posts"
+    if posts_dir is None:
+        posts_dir = script_dir / "feeds.code-drill.eu" / "posts"
     
     # Ensure posts directory exists
     posts_dir.mkdir(parents=True, exist_ok=True)
@@ -192,41 +238,55 @@ def main():
     total_created = 0
     total_processed = 0
     
-    # Check command line arguments
-    if len(sys.argv) > 1:
+    if dates:
         # Process specific dates provided as arguments
-        for date_arg in sys.argv[1:]:
+        typer.echo(f"Processing {len(dates)} date(s) from {host}")
+        
+        for date_str in dates:
             # Validate date format
             try:
-                datetime.strptime(date_arg, '%Y-%m-%d')
-                csv_url = f"http://host.docker.internal:8000/daily-items/{date_arg}.csv"
-                created, processed = process_csv_for_date(csv_url, posts_dir)
+                datetime.strptime(date_str, '%Y-%m-%d')
+                csv_url = f"http://{host}/daily-items/{date_str}.csv"
+                created, processed = process_csv_for_date(csv_url, posts_dir, verbose)
                 total_created += created
                 total_processed += processed
+                
+                if not verbose:
+                    typer.echo(f"{date_str}: {created} created, {processed-created} skipped")
+                    
             except ValueError:
-                print(f"Invalid date format: {date_arg}. Use YYYY-MM-DD format.")
+                typer.echo(f"ERROR: Invalid date format: {date_str}. Use YYYY-MM-DD format.", err=True)
                 continue
         
-        print(f"\nTotal processed {total_processed} items across all dates")
-        print(f"Total created {total_created} new blog posts")
+        typer.echo(f"\nSummary:")
+        typer.echo(f"   Total processed: {total_processed} items")
+        typer.echo(f"   Total created: {total_created} new posts")
+        typer.echo(f"   Total skipped: {total_processed - total_created} existing posts")
         
     else:
         # Default behavior - process today's CSV
-        csv_url = "http://host.docker.internal:8000/daily-items.csv"
-        created, processed = process_csv_for_date(csv_url, posts_dir)
+        typer.echo(f"Processing today's data from {host}")
+        csv_url = f"http://{host}/daily-items.csv"
+        created, processed = process_csv_for_date(csv_url, posts_dir, verbose)
         total_created = created
         total_processed = processed
         
-        print(f"\nProcessed {total_processed} items")
-        print(f"Created {total_created} new blog posts")
-        print(f"Skipped {total_processed - total_created} items")
+        typer.echo(f"\nSummary:")
+        typer.echo(f"   Processed: {total_processed} items")
+        typer.echo(f"   Created: {total_created} new posts")
+        typer.echo(f"   Skipped: {total_processed - total_created} existing posts")
     
     if total_created > 0:
-        print(f"\nTo build the site, run:")
-        print(f"cd {posts_dir.parent}")
-        print(f"uv run --active nikola build")
-    
-    return 0
+        typer.echo(f"\nTo build the site:")
+        typer.echo(f"   cd {posts_dir.parent}")
+        typer.echo(f"   uv run --active nikola build")
+    else:
+        typer.echo("\nNo new posts to build.")
+
+
+def main():
+    """Entry point for the script."""
+    app()
 
 
 if __name__ == "__main__":
