@@ -10,7 +10,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
-from typing import List, Optional
+from typing import List, Optional, Dict, Set
 import html
 
 import typer
@@ -57,6 +57,186 @@ def format_markdown_content(item):
 """
     
     return content.strip()
+
+
+def parse_post_metadata(post_file: Path) -> Dict[str, str]:
+    """Parse metadata from a blog post file."""
+    metadata = {}
+    try:
+        with open(post_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+        # Extract metadata from HTML comment block
+        metadata_match = re.search(r'<!--\s*\n(.*?)\n\s*-->', content, re.DOTALL)
+        if metadata_match:
+            metadata_content = metadata_match.group(1)
+            
+            # Parse each metadata line
+            for line in metadata_content.split('\n'):
+                line = line.strip()
+                if line.startswith('.. '):
+                    line = line[3:]  # Remove '.. ' prefix
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        metadata[key.strip()] = value.strip()
+    except Exception as e:
+        print(f"Error parsing metadata from {post_file}: {e}")
+    
+    return metadata
+
+
+def scan_existing_posts(posts_dir: Path) -> tuple[Set[str], Set[str]]:
+    """Scan existing posts to extract unique categories and sources."""
+    categories = set()
+    sources = set()
+    
+    # Find all .md files in the posts directory
+    post_files = list(posts_dir.glob('**/*.md'))
+    
+    for post_file in post_files:
+        metadata = parse_post_metadata(post_file)
+        
+        # Extract category
+        if 'category' in metadata:
+            category = metadata['category'].strip()
+            if category:
+                categories.add(category)
+        
+        # Extract source from tags (first tag is typically the source)
+        if 'tags' in metadata:
+            tags = metadata['tags'].split(',')
+            if tags and tags[0].strip():
+                source_tag = tags[0].strip()
+                sources.add(source_tag)
+    
+    return categories, sources
+
+
+def generate_category_buttons(categories: Set[str]) -> str:
+    """Generate category filter buttons HTML."""
+    # Define category display names and their URL fragments
+    category_mapping = {
+        'educational': ('Educational & How-To', 'cat_educational'),
+        'event': ('Event', 'cat_event'),
+        'general': ('General', 'cat_general'),
+        'industry_analysis': ('Industry Analysis & Insights', 'cat_industry_analysis'),
+        'product_announcements': ('Product Announcements & Updates', 'cat_product_announcements'),
+        'security_compliance': ('Security & Compliance Focus', 'cat_security_compliance'),
+        'technical_deep_dives': ('Technical Deep Dives', 'cat_technical_deep_dives')
+    }
+    
+    buttons = []
+    for category in sorted(categories):
+        if category in category_mapping:
+            display_name, url_fragment = category_mapping[category]
+        else:
+            # Handle new categories dynamically
+            display_name = category.replace('_', ' ').title()
+            url_fragment = f'cat_{category}'
+        
+        button = f'                <a href="${{abs_link(\'categories/{url_fragment}/\')}}" class="btn btn-outline-primary btn-sm">{display_name}</a>'
+        buttons.append(button)
+    
+    return '\n'.join(buttons)
+
+
+def generate_source_buttons(sources: Set[str]) -> str:
+    """Generate source filter buttons HTML."""
+    # Define source display names based on tag names
+    source_mapping = {
+        '1password-blog': '1Password Blog',
+        'airbnb-engineering': 'Airbnb Engineering',
+        'amd-developer-blog': 'AMD Developer Blog',
+        'apple-developer-news': 'Apple Developer News',
+        'atlassian-developer-blog': 'Atlassian Developer Blog',
+        'auth0-blog': 'Auth0 Blog',
+        'aws-blog': 'AWS Blog',
+        'circleci-blog': 'CircleCI Blog',
+        'cisco-developer-blog': 'Cisco Developer Blog',
+        'cloudflare-blog': 'Cloudflare Blog',
+        'code-as-craft': 'Code as Craft',
+        'crowdstrike-blog': 'CrowdStrike Blog',
+        'databricks-blog': 'Databricks Blog',
+        'digitalocean-blog': 'DigitalOcean Blog',
+        'docker-blog': 'Docker Blog',
+        'doordash-engineering': 'DoorDash Engineering',
+        'dropbox-tech-blog': 'Dropbox Tech Blog',
+        'elastic-blog': 'Elastic Blog',
+        'engineering-at-meta': 'Engineering at Meta',
+        'gitlab-blog': 'GitLab Blog',
+        'google-developers-blog': 'Google Developers Blog',
+        'google-research': 'Google Research',
+        'grab-tech': 'Grab Tech',
+        'hashicorp-blog': 'HashiCorp Blog',
+        'heroku-blog': 'Heroku Blog',
+        'hugging-face-blog': 'Hugging Face Blog',
+        'jetbrains-blog': 'JetBrains Blog',
+        'kubernetes-blog': 'Kubernetes Blog',
+        'ly-corporation-tech-blog': 'LY Corporation Tech Blog',
+        'lyft-engineering': 'Lyft Engineering',
+        'medium-engineering': 'Medium Engineering',
+        'mongodb-blog': 'MongoDB Blog',
+        'mozilla-hacks': 'Mozilla Hacks',
+        'netflix-technology-blog': 'Netflix Technology Blog',
+        'nvidia-developer-blog': 'NVIDIA Developer Blog',
+        'okta-developer-blog': 'Okta Developer Blog',
+        'palantir-blog': 'Palantir Blog',
+        'pinterest-engineering': 'Pinterest Engineering',
+        'planetscale-blog': 'PlanetScale Blog',
+        'railway-blog': 'Railway Blog',
+        'red-hat-developer-blog': 'Red Hat Developer Blog',
+        'robinhood-engineering': 'Robinhood Engineering',
+        'salesforce-engineering': 'Salesforce Engineering',
+        'stack-overflow-blog': 'Stack Overflow Blog',
+        'stripe-blog': 'Stripe Blog',
+        'supabase-blog': 'Supabase Blog',
+        'tableau-engineering': 'Tableau Engineering',
+        'twilio-engineering': 'Twilio Engineering',
+        'uber-engineering': 'Uber Engineering',
+        'unity-blog': 'Unity Blog',
+        'unreal-engine-blog': 'Unreal Engine Blog',
+        'vercel-blog': 'Vercel Blog',
+        'webflow-blog': 'Webflow Blog'
+    }
+    
+    buttons = []
+    for source in sorted(sources):
+        display_name = source_mapping.get(source, source.replace('-', ' ').title())
+        button = f'                <a href="${{abs_link(\'sources/{source}/\')}}" class="btn btn-outline-success btn-sm">{display_name}</a>'
+        buttons.append(button)
+    
+    return '\n'.join(buttons)
+
+
+def update_filters_template(templates_dir: Path, categories: Set[str], sources: Set[str]) -> None:
+    """Update the filters template with dynamic content."""
+    template_file = templates_dir / 'filters_nav.tmpl'
+    
+    if not template_file.exists():
+        print(f"Template file not found: {template_file}")
+        return
+    
+    # Generate dynamic content
+    category_buttons = generate_category_buttons(categories)
+    source_buttons = generate_source_buttons(sources)
+    
+    try:
+        # Read template file
+        with open(template_file, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
+        # Replace placeholders with generated content
+        updated_content = template_content.replace('${DYNAMIC_CATEGORIES}', category_buttons)
+        updated_content = updated_content.replace('${DYNAMIC_SOURCES}', source_buttons)
+        
+        # Write updated template
+        with open(template_file, 'w', encoding='utf-8') as f:
+            f.write(updated_content)
+            
+        print(f"Updated filters template with {len(categories)} categories and {len(sources)} sources")
+        
+    except Exception as e:
+        print(f"Error updating filters template: {e}")
 
 
 def create_blog_post(item: dict, posts_dir: Path, verbose: bool = False) -> bool:
@@ -257,6 +437,9 @@ def generate(
     # Ensure posts directory exists
     posts_dir.mkdir(parents=True, exist_ok=True)
     
+    # Determine templates directory
+    templates_dir = script_dir / "feeds.code-drill.eu" / "templates"
+    
     # Initialize counters
     total_created = 0
     total_processed = 0
@@ -348,6 +531,14 @@ def generate(
         typer.echo(f"   nikola build")
     else:
         typer.echo("\nNo new posts to build.")
+    
+    # Update filters template with current categories and sources
+    typer.echo("\nUpdating filters...")
+    categories, sources = scan_existing_posts(posts_dir)
+    if categories or sources:
+        update_filters_template(templates_dir, categories, sources)
+    else:
+        typer.echo("No posts found to generate filters from.")
 
 
 def main():
