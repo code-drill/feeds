@@ -1,1 +1,1 @@
-cd feeds.code-drill.eu && nikola build
+a && uv run python generate_blog_posts.py && cd feeds.code-drill.eu && nikola build && cd .. && echo done!
