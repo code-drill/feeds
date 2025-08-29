@@ -252,4 +252,5 @@ pyrightconfig.json
 /feeds.code-drill.eu/cache/
 /feeds.code-drill.eu/output/
 
-feeds.code-drill.eu/.doit.db*
+/feeds.code-drill.eu/.doit.db*
+/feeds.code-drill.eu/posts/
