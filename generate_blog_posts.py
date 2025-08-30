@@ -2,7 +2,7 @@
 """
 Script to generate Nikola blog posts from CSV data.
 """
-
+import contextlib
 import csv
 import urllib.request
 import os
@@ -287,6 +287,13 @@ def create_blog_post(item: dict, posts_dir: Path, verbose: bool = False) -> bool
     
     # Set category based on AI Category (categories will be used for content type filtering)
     category = item['AI Category'].lower() if item['AI Category'] else 'general'
+
+    is_valid_to_process = item['AI Category'].strip() and item['Summary'].strip()
+    if not is_valid_to_process:
+        if verbose:
+            typer.echo(f"SKIP: {date_str}/{filename} - no `Summary` or `AI Category` present")
+        return False
+
     
     # Create Nikola metadata header using HTML comments
     metadata = f"""<!--
@@ -315,26 +322,25 @@ def create_blog_post(item: dict, posts_dir: Path, verbose: bool = False) -> bool
 
 
 def fetch_csv_data(url):
-    """Fetch CSV data from the endpoint."""
-    try:
-        with urllib.request.urlopen(url, timeout=30) as response:
-            return response.read().decode('utf-8')
-    except Exception as e:
-        print(f"Error fetching CSV data: {e}")
-        return None
+    with urllib.request.urlopen(url, timeout=30) as response:
+        return response.read().decode('utf-8')
 
 
 def process_csv_for_date(csv_url: str, posts_dir: Path, verbose: bool = False) -> tuple[int, int]:
     """Process CSV data for a specific date."""
     if verbose:
         typer.echo(f"Fetching data from {csv_url}")
-    
-    csv_data = fetch_csv_data(csv_url)
-    
-    if not csv_data:
-        typer.echo(f"ERROR: Failed to fetch CSV data from {csv_url}", err=True)
+
+    try:
+        csv_data = fetch_csv_data(csv_url)
+        if not csv_data or not csv_data.strip():
+            typer.echo(f"No data fetched CSV from: {csv_url}")
+            return 0, 0
+    except Exception as e:
+        typer.echo(f"ERROR: Failed to fetch CSV data from: {csv_url}, error: {e}", err=True)
         return 0, 0
-    
+
+
     # Parse CSV
     try:
         csv_reader = csv.DictReader(csv_data.splitlines())
