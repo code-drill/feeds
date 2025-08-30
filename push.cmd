@@ -1,0 +1,1 @@
+cd feeds.code-drill.eu\output && gcnow && git push && cd ..\.. && echo done!

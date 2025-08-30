@@ -445,13 +445,15 @@ def generate(
     total_processed = 0
     
     # Handle date range processing
-    if start_date is not None and offset_days is not None:
-        # Validate start date format
-        try:
-            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-        except ValueError:
-            typer.echo(f"ERROR: Invalid start date format: {start_date}. Use YYYY-MM-DD format.", err=True)
-            raise typer.Exit(1)
+    if offset_days is not None:
+        if start_date is None:
+            start_dt = datetime.today().date()
+        else:
+            try:
+                start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            except ValueError:
+                typer.echo(f"ERROR: Invalid start date format: {start_date}. Use YYYY-MM-DD format.", err=True)
+                raise typer.Exit(1)
         
         # Generate date range
         dates_to_process = []
