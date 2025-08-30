@@ -14,6 +14,32 @@ from typing import List, Optional, Dict, Set
 import html
 
 import typer
+from pydantic import BaseModel, Field, validator
+
+
+class BlogPostItem(BaseModel):
+    """Pydantic model for blog post CSV data."""
+    title: str = Field(..., alias="Title", min_length=1)
+    link: str = Field(..., alias="Link", min_length=1)
+    published_date: str = Field(..., alias="Published Date", min_length=1)
+    summary: str = Field(default="", alias="Summary")
+    ai_category: str = Field(default="", alias="AI Category")
+    source_name: str = Field(default="", alias="Source Name")
+    source_url: str = Field(default="", alias="Source URL")
+    author: str = Field(default="", alias="Author")
+    
+    @validator('title', 'link', 'published_date')
+    def required_fields_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Required field cannot be empty')
+        return v.strip()
+    
+    @validator('summary', 'ai_category', 'source_name', 'source_url', 'author', pre=True)
+    def optional_fields_cleanup(cls, v):
+        return v.strip() if v else ""
+    
+    class Config:
+        allow_population_by_field_name = True
 
 
 def slugify(text):
@@ -326,11 +352,75 @@ def fetch_csv_data(url):
         return response.read().decode('utf-8')
 
 
+def parse_csv_to_objects(csv_data: str, verbose: bool = False) -> List[BlogPostItem]:
+    """Parse CSV data and return list of BlogPostItem objects."""
+    if not csv_data or not csv_data.strip():
+        return []
+    
+    try:
+        csv_reader = csv.DictReader(csv_data.splitlines())
+        parsed_items = []
+        
+        for row_num, row_data in enumerate(csv_reader, 1):
+            try:
+                item = BlogPostItem(**row_data)
+                parsed_items.append(item)
+            except Exception as e:
+                if verbose:
+                    typer.echo(f"WARNING: Skipping row {row_num} - validation error: {e}")
+                continue
+        
+        return parsed_items
+    except Exception as e:
+        typer.echo(f"ERROR: Error parsing CSV data: {e}", err=True)
+        return []
+
+
+def is_valid_to_save(item: BlogPostItem) -> bool:
+    """Validate if a BlogPostItem object is valid to save as a blog post."""
+    return bool(item.ai_category.strip() and item.summary.strip())
+
+
+def save_items_to_files(items: List[BlogPostItem], posts_dir: Path, verbose: bool = False) -> tuple[int, int]:
+    """Save list of BlogPostItem objects to files and return counts."""
+    created_count = 0
+    processed_count = 0
+    
+    for item in items:
+        processed_count += 1
+        
+        if not is_valid_to_save(item):
+            if verbose:
+                typer.echo(f"SKIP: {item.title[:50]}... - no `Summary` or `AI Category` present")
+            continue
+        
+        try:
+            # Convert BlogPostItem to dict for compatibility with create_blog_post
+            item_dict = {
+                'Title': item.title,
+                'Link': item.link,
+                'Published Date': item.published_date,
+                'Summary': item.summary,
+                'AI Category': item.ai_category,
+                'Source Name': item.source_name,
+                'Source URL': item.source_url,
+                'Author': item.author
+            }
+            
+            if create_blog_post(item_dict, posts_dir, verbose):
+                created_count += 1
+        except Exception as e:
+            typer.echo(f"ERROR: Error creating post for '{item.title}': {e}", err=True)
+    
+    return created_count, processed_count
+
+
 def process_csv_for_date(csv_url: str, posts_dir: Path, verbose: bool = False) -> tuple[int, int]:
-    """Process CSV data for a specific date."""
+    """Process CSV data for a specific date using structured approach."""
     if verbose:
         typer.echo(f"Fetching data from {csv_url}")
 
+    # Fetch CSV data
     try:
         csv_data = fetch_csv_data(csv_url)
         if not csv_data or not csv_data.strip():
@@ -340,33 +430,13 @@ def process_csv_for_date(csv_url: str, posts_dir: Path, verbose: bool = False) -
         typer.echo(f"ERROR: Failed to fetch CSV data from: {csv_url}, error: {e}", err=True)
         return 0, 0
 
-
-    # Parse CSV
-    try:
-        csv_reader = csv.DictReader(csv_data.splitlines())
-    except Exception as e:
-        typer.echo(f"ERROR: Error parsing CSV data: {e}", err=True)
+    # Parse CSV data to list of objects
+    items = parse_csv_to_objects(csv_data, verbose)
+    if not items:
         return 0, 0
     
-    created_count = 0
-    processed_count = 0
-    
-    for item in csv_reader:
-        processed_count += 1
-        
-        # Skip items without required fields
-        if not all([item.get('Title'), item.get('Link'), item.get('Published Date')]):
-            if verbose:
-                typer.echo(f"WARNING: Skipping item {processed_count} - missing required fields")
-            continue
-            
-        try:
-            if create_blog_post(item, posts_dir, verbose):
-                created_count += 1
-        except Exception as e:
-            typer.echo(f"ERROR: Error creating post for '{item.get('Title', 'Unknown')}': {e}", err=True)
-    
-    return created_count, processed_count
+    # Save valid items to files
+    return save_items_to_files(items, posts_dir, verbose)
 
 
 app = typer.Typer(
