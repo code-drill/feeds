@@ -14,11 +14,13 @@ from typing import List, Optional, Dict, Set
 import html
 
 import typer
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class BlogPostItem(BaseModel):
     """Pydantic model for blog post CSV data."""
+    model_config = ConfigDict(populate_by_name=True)
+    
     title: str = Field(..., alias="Title", min_length=1)
     link: str = Field(..., alias="Link", min_length=1)
     published_date: str = Field(..., alias="Published Date", min_length=1)
@@ -28,18 +30,17 @@ class BlogPostItem(BaseModel):
     source_url: str = Field(default="", alias="Source URL")
     author: str = Field(default="", alias="Author")
     
-    @validator('title', 'link', 'published_date')
+    @field_validator('title', 'link', 'published_date')
+    @classmethod
     def required_fields_not_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('Required field cannot be empty')
         return v.strip()
     
-    @validator('summary', 'ai_category', 'source_name', 'source_url', 'author', pre=True)
+    @field_validator('summary', 'ai_category', 'source_name', 'source_url', 'author', mode='before')
+    @classmethod
     def optional_fields_cleanup(cls, v):
         return v.strip() if v else ""
-    
-    class Config:
-        allow_population_by_field_name = True
 
 
 def slugify(text):
