@@ -2,9 +2,6 @@ Site generator for [feeds.code-drill.eu](http://feeds.code-drill.eu/) based on h
 - pre requirements:
   - manual setup
     - create python venv  `uv sync`
-  - automatic
-    - docker
-    - run `run-bash.cmd`
 
 - generate content:
   ```
@@ -17,15 +14,18 @@ Site generator for [feeds.code-drill.eu](http://feeds.code-drill.eu/) based on h
   ```
 - build site/html:
   ```
+  cd feeds.code-drill.eu
   nikola build
+  ```
+
+- fetch content and build site/html:
+  ```
+  cmd-build.cmd
   ```
 
 - deploy content:
   ```
-  cd output
-  open index.html
-  gcnow "PUT COMMIT MESSAGE HERE"
-  git push -u origin main
+  cmd-push.cmd
   ```
   
 - to change theme:
