@@ -1,1 +1,1 @@
-cd feeds.code-drill.eu\output && gcnow && git push && cd ..\.. && echo done!
+pushd feeds.code-drill.eu\output && gcnow && git push 2>nul & popd & echo done!
