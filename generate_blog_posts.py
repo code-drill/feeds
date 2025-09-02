@@ -268,10 +268,14 @@ def update_filters_template(templates_dir: Path, categories: Set[str], sources: 
 
 def create_blog_post(item: dict, posts_dir: Path, verbose: bool = False) -> bool:
     """Create a single blog post file."""
-    # Parse the published date
-    pub_date = datetime.fromisoformat(item['Published Date'].replace('Z', '+00:00'))
+    # Parse the published date for directory structure but use current time for publication
+
+    pub_date = datetime.fromisoformat(item['Published Date'].replace('Z', '+00:00')).replace(tzinfo=None)
+    if pub_date > datetime.now():
+        pub_date = datetime.now()
+
     date_str = pub_date.strftime('%Y-%m-%d')
-    
+
     # Create date directory
     date_dir = posts_dir / date_str
     date_dir.mkdir(parents=True, exist_ok=True)
@@ -363,6 +367,12 @@ def parse_csv_to_objects(csv_data: str, verbose: bool = False) -> List[BlogPostI
         parsed_items = []
         
         for row_num, row_data in enumerate(csv_reader, 1):
+            if verbose:
+                # Safely handle Unicode characters for console output
+                try:
+                    typer.echo(f"INFO: processing {row_num} - data: {row_data}")
+                except UnicodeEncodeError:
+                    typer.echo(f"INFO: processing {row_num} - data: [contains Unicode characters]")
             try:
                 item = BlogPostItem(**row_data)
                 parsed_items.append(item)
