@@ -56,3 +56,8 @@ uv run python generate_blog_posts.py
 # activate venv under .venv
 uv run python generate_blog_posts.py 2025-08-25 2025-08-26 2025-08-27
 ```
+
+*** start web server ***
+```shell
+python -m http.server 9106 --bind 127.0.0.1 --directory feeds.code-drill.eu\output
+```
