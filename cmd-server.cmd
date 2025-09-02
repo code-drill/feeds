@@ -1,0 +1,1 @@
+python -m http.server 9106 --bind 127.0.0.1 --directory feeds.code-drill.eu\output
