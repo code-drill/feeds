@@ -1,1 +1,0 @@
-a && uv run python generate_blog_posts.py --offset-days -3 && cd feeds.code-drill.eu && nikola build && cd .. && echo done!
