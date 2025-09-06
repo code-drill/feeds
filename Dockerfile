@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     pandoc \
     curl \
     dos2unix \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables early
@@ -19,8 +20,12 @@ ENV PATH="/home/app_user/venv/bin:$PATH" \
 WORKDIR /app
 
 COPY pyproject.toml /app/pyproject.toml
+COPY uv.lock /app/uv.lock
 
 RUN uv sync --active
+
+COPY --chmod=0755 *.bsh /app/
+COPY *.py /app/
 
 ENV UV_PYTHON="/home/app_user/venv/bin/python"
 
