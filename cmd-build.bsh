@@ -4,6 +4,10 @@ set -e
 cd /app
 uv run --active python generate_blog_posts.py --offset-days -3
 cd feeds.code-drill.eu
+echo "Cleaning build cache..."
+rm -f .doit.db*
+echo "Starting nikola build with verbose output..."
 nikola build --backend=json
 cd ..
 echo "done!"
+exit 0

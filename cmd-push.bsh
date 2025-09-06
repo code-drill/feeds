@@ -4,6 +4,6 @@ set -e
 cd feeds.code-drill.eu/output
 git add -A
 git commit -m "$(date): automated update" || true
-git push 2>/dev/null || true
+#git push 2>/dev/null || true
 cd ../..
 echo "done!"
